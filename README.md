@@ -1,8 +1,6 @@
 # ObjectReference
-[![unity-test](https://github.com/AndanteTribe/ObjectReference/actions/workflows/unity-test.yml/badge.svg)](https://github.com/AndanteTribe/ObjectReference/actions/workflows/unity-test.yml)
 [![Releases](https://img.shields.io/github/release/AndanteTribe/ObjectReference.svg)](https://github.com/AndanteTribe/ObjectReference/releases)
 [![GitHub license](https://img.shields.io/github/license/AndanteTribe/ObjectReference.svg)](./LICENSE)
-[![openupm](https://img.shields.io/npm/v/jp.andantetribe.objectreference?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/jp.andantetribe.objectreference/)
 
 English | [日本語](README_JA.md)
 
@@ -38,7 +36,7 @@ public class ObjectReferenceSample : MonoBehaviour
     [SerializeReference]
     private IObjectReference<GameObject> _reference;
 
-    private async UniTaskVoid Start()
+    private async UniTask Start()
     {
         var obj = await _reference.LoadAsync(destroyCancellationToken);
         Instantiate(obj, Vector3.zero, Quaternion.identity);
@@ -64,7 +62,7 @@ public class AddressableSample : MonoBehaviour
     private readonly IObjectReference<GameObject> _reference
         = new AddressableObjectReference<GameObject>("assets/prefabs/MyPrefab.prefab");
 
-    private async UniTaskVoid Start()
+    private async UniTask Start()
     {
         var prefab = await _reference.LoadAsync(destroyCancellationToken);
         Instantiate(prefab, Vector3.zero, Quaternion.identity);
@@ -97,3 +95,4 @@ An `IObjectReference<T>` implementation that loads assets via Unity Addressables
 
 ## License
 This library is released under the MIT license.
+
