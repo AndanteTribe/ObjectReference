@@ -30,7 +30,7 @@ namespace ObjectReference
     ///     private async UniTask Start()
     ///     {
     ///         // Load the prefab asynchronously.
-    ///         var prefab = await _reference.LoadAsync(destoryCancellationToken);
+    ///         var prefab = await _reference.LoadAsync(destroyCancellationToken);
     ///         var instance = Instantiate(prefab, Vector3.zero, Quaternion.identity);
     ///     }
     ///
@@ -61,12 +61,7 @@ namespace ObjectReference
                 _handle = Addressables.LoadAssetAsync<T>(_address);
             }
 
-            if (!_handle.IsDone)
-            {
-                await _handle.ToUniTask(cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
-            }
-
-            return _handle.Result;
+            return await _handle.ToUniTask(cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
         }
 
         /// <inheritdoc />
@@ -78,12 +73,7 @@ namespace ObjectReference
                 _handle = Addressables.LoadAssetAsync<T>(_address);
             }
 
-            if (!_handle.IsDone)
-            {
-                await _handle.ToUniTask(progress: progress, cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
-            }
-
-            return _handle.Result;
+            return await _handle.ToUniTask(progress: progress, cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
         }
 
         /// <inheritdoc />
