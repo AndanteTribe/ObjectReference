@@ -36,7 +36,7 @@ public class ObjectReferenceSample : MonoBehaviour
     [SerializeReference]
     private IObjectReference<GameObject> _reference;
 
-    private async UniTask Start()
+    private async UniTaskVoid Start()
     {
         var obj = await _reference.LoadAsync(destroyCancellationToken);
         Instantiate(obj, Vector3.zero, Quaternion.identity);
@@ -62,7 +62,7 @@ public class AddressableSample : MonoBehaviour
     private readonly IObjectReference<GameObject> _reference
         = new AddressableObjectReference<GameObject>("assets/prefabs/MyPrefab.prefab");
 
-    private async UniTask Start()
+    private async UniTaskVoid Start()
     {
         var prefab = await _reference.LoadAsync(destroyCancellationToken);
         Instantiate(prefab, Vector3.zero, Quaternion.identity);
