@@ -1,0 +1,18 @@
+{
+    "name": "ObjectReference.Editor",
+    "rootNamespace": "ObjectReference.Editor",
+    "references": [
+        "GUID:5357f2d493d45f849802c905da70206b"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
