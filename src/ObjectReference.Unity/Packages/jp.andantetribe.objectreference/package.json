@@ -1,0 +1,15 @@
+{
+  "name": "jp.andantetribe.objectreference",
+  "displayName": "ObjectReference",
+  "author": {
+    "name": "AndanteTribe",
+    "url": "https://github.com/AndanteTribe"
+  },
+  "version": "1.0.0",
+  "unity": "6000.0",
+  "description": "Provides a simple interface and implementation for asynchronously loading Unity objects.",
+  "license": "MIT",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  }
+}
