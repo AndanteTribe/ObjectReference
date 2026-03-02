@@ -176,27 +176,30 @@ namespace ObjectReference.Tests
         });
 
 #else
-        // When Addressables/UniTask are not present, run the direct-reference tests synchronously.
+        // When Addressables/UniTask are not present, run the direct-reference tests using ToCoroutineEnumerator.
 
         [UnityTest]
-        public IEnumerator LoadAsync_GameObjectReference_ReturnsCube() => LoadDirectTest(async data =>
+        public IEnumerator LoadAsync_GameObjectReference_ReturnsCube() => new ToCoroutineEnumerator(async () =>
         {
+            var data = LoadData(DirectDataPath);
             var result = await data.GameObjectReference.LoadAsync(CancellationToken.None);
             Assert.That(result, Is.Not.Null);
             Assert.That(result.name, Is.EqualTo("Cube"));
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_MaterialReference_ReturnsMaterial() => LoadDirectTest(async data =>
+        public IEnumerator LoadAsync_MaterialReference_ReturnsMaterial() => new ToCoroutineEnumerator(async () =>
         {
+            var data = LoadData(DirectDataPath);
             var result = await data.MaterialReference.LoadAsync(CancellationToken.None);
             Assert.That(result, Is.Not.Null);
             Assert.That(result.name, Is.EqualTo("New Material"));
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_WithProgress_ReportsAndReturnsAsset() => LoadDirectTest(async data =>
+        public IEnumerator LoadAsync_WithProgress_ReportsAndReturnsAsset() => new ToCoroutineEnumerator(async () =>
         {
+            var data = LoadData(DirectDataPath);
             float lastProgress = -1f;
             var progress = new Progress<float>(v => lastProgress = v);
             var result = await data.GameObjectReference.LoadAsync(progress, CancellationToken.None);
@@ -205,77 +208,55 @@ namespace ObjectReference.Tests
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException()
+        public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException() => new ToCoroutineEnumerator(async () =>
         {
-            return DirectCancellationTest();
-            static IEnumerator DirectCancellationTest()
+            var data = LoadData(DirectDataPath);
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+            var caught = false;
+            try
             {
-                var data = LoadData(DirectDataPath);
-                using var cts = new CancellationTokenSource();
-                cts.Cancel();
-                var caught = false;
-                try
-                {
-                    data.GameObjectReference.LoadAsync(cts.Token).GetAwaiter().GetResult();
-                }
-                catch (OperationCanceledException)
-                {
-                    caught = true;
-                }
-                Assert.That(caught, Is.True);
-                yield break;
+                await data.GameObjectReference.LoadAsync(cts.Token);
+                Assert.Fail("Expected OperationCanceledException");
             }
-        }
+            catch (OperationCanceledException)
+            {
+                caught = true;
+            }
+            Assert.That(caught, Is.True);
+        });
 
         [UnityTest]
-        public IEnumerator LoadAsync_EmptyReference_ThrowsNullReferenceException()
+        public IEnumerator LoadAsync_EmptyReference_ThrowsNullReferenceException() => new ToCoroutineEnumerator(async () =>
         {
-            return DirectNullTest();
-            static IEnumerator DirectNullTest()
+            var data = LoadData(EmptyDataPath);
+            var caught = false;
+            try
             {
-                var data = LoadData(EmptyDataPath);
-                var caught = false;
-                try
-                {
-                    data.GameObjectReference.LoadAsync(CancellationToken.None).GetAwaiter().GetResult();
-                }
-                catch (NullReferenceException)
-                {
-                    caught = true;
-                }
-                Assert.That(caught, Is.True);
-                yield break;
+                await data.GameObjectReference.LoadAsync(CancellationToken.None);
+                Assert.Fail("Expected NullReferenceException");
             }
-        }
+            catch (NullReferenceException)
+            {
+                caught = true;
+            }
+            Assert.That(caught, Is.True);
+        });
 
         [UnityTest]
-        public IEnumerator Dispose_AfterLoad_DoesNotThrow() => LoadDirectTest(async data =>
+        public IEnumerator Dispose_AfterLoad_DoesNotThrow() => new ToCoroutineEnumerator(async () =>
         {
+            var data = LoadData(DirectDataPath);
             await data.GameObjectReference.LoadAsync(CancellationToken.None);
             Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
         });
 
         [UnityTest]
-        public IEnumerator Dispose_WithoutLoad_DoesNotThrow()
-        {
-            return DirectDisposeTest();
-            static IEnumerator DirectDisposeTest()
-            {
-                var data = LoadData(DirectDataPath);
-                Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
-                yield break;
-            }
-        }
-
-        private static IEnumerator LoadDirectTest(Func<DummyObjectReferenceData, System.Threading.Tasks.Task> body)
+        public IEnumerator Dispose_WithoutLoad_DoesNotThrow() => new ToCoroutineEnumerator(async () =>
         {
             var data = LoadData(DirectDataPath);
-            var task = body(data);
-            while (!task.IsCompleted)
-                yield return null;
-            if (task.Exception != null)
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(task.Exception.InnerException ?? task.Exception).Throw();
-        }
+            Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
+        });
 #endif
     }
 
