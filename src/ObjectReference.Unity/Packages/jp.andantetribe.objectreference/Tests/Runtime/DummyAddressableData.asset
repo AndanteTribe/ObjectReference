@@ -20,7 +20,7 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 7722165880037343240
-      type: {class: SerializableAddressableObjectReference`1[[UnityEngine.GameObject, UnityEngine.CoreModule]], ObjectReference.Runtime}
+      type: {class: 'SerializableAddressableObjectReference`1[[UnityEngine.GameObject, UnityEngine.CoreModule]], ObjectReference.Runtime'}
       data:
         _value:
           m_AssetGUID: 8df65f68cf0539e438a06681e8485f72
@@ -28,7 +28,7 @@ MonoBehaviour:
           m_SubObjectType: 
           m_EditorAssetChanged: 0
     - rid: 7722165880037343241
-      type: {class: SerializableAddressableObjectReference`1[[UnityEngine.Material, UnityEngine.CoreModule]], ObjectReference.Runtime}
+      type: {class: 'SerializableAddressableObjectReference`1[[UnityEngine.Material, UnityEngine.CoreModule]], ObjectReference.Runtime'}
       data:
         _value:
           m_AssetGUID: 0f000f9de0c56ed438ed837247e4bacb

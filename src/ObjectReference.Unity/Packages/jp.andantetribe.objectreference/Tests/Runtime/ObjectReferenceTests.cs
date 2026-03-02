@@ -217,6 +217,7 @@ namespace ObjectReference.Tests
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
             Exception? caughtException = null;
+            LogAssert.ignoreFailingMessages = true;
             try
             {
                 await reference.LoadAsync(CancellationToken.None);
@@ -228,6 +229,7 @@ namespace ObjectReference.Tests
             }
             finally
             {
+                LogAssert.ignoreFailingMessages = false;
                 reference.Dispose();
             }
             Assert.That(caughtException, Is.Not.Null);
@@ -237,6 +239,7 @@ namespace ObjectReference.Tests
         public IEnumerator LoadAsync_WhenHandleAlreadyExists_ReusesExistingHandle() => new ToCoroutineEnumerator(async () =>
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
+            LogAssert.ignoreFailingMessages = true;
             try
             {
                 await reference.LoadAsync(CancellationToken.None);
@@ -255,6 +258,7 @@ namespace ObjectReference.Tests
             }
             finally
             {
+                LogAssert.ignoreFailingMessages = false;
                 reference.Dispose();
             }
             Assert.That(caughtException, Is.Not.Null);
@@ -284,6 +288,7 @@ namespace ObjectReference.Tests
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
             Exception? caughtException = null;
+            LogAssert.ignoreFailingMessages = true;
             try
             {
                 await reference.LoadAsync(new Progress<float>(_ => { }), CancellationToken.None);
@@ -295,6 +300,7 @@ namespace ObjectReference.Tests
             }
             finally
             {
+                LogAssert.ignoreFailingMessages = false;
                 reference.Dispose();
             }
             Assert.That(caughtException, Is.Not.Null);

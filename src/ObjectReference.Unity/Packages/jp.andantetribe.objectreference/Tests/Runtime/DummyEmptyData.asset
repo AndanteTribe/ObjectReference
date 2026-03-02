@@ -20,10 +20,10 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 7722165880037343250
-      type: {class: SerializableObjectReference`1[[UnityEngine.GameObject, UnityEngine.CoreModule]], ObjectReference.Runtime}
+      type: {class: 'SerializableObjectReference`1[[UnityEngine.GameObject, UnityEngine.CoreModule]], ObjectReference.Runtime'}
       data:
         _value: {fileID: 0}
     - rid: 7722165880037343251
-      type: {class: SerializableObjectReference`1[[UnityEngine.Material, UnityEngine.CoreModule]], ObjectReference.Runtime}
+      type: {class: 'SerializableObjectReference`1[[UnityEngine.Material, UnityEngine.CoreModule]], ObjectReference.Runtime'}
       data:
         _value: {fileID: 0}
