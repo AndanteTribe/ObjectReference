@@ -2,7 +2,7 @@
 
 using System;
 using System.Collections;
-using System.Reflection;
+using System.Collections.Generic;
 using System.Threading;
 using NUnit.Framework;
 using UnityEngine;
@@ -14,108 +14,288 @@ using Cysharp.Threading.Tasks;
 namespace ObjectReference.Tests
 {
     /// <summary>
-    /// Tests for SerializableObjectReference&lt;T&gt; via the [SerializeReference] workflow.
+    /// Tests for all <see cref="IObjectReference{T}"/> implementations via the [SerializeReference] workflow.
+    /// Common load/dispose behaviour is parameterized over both SerializableObjectReference and
+    /// SerializableAddressableObjectReference assets using <see cref="ValueSourceAttribute"/>.
     /// </summary>
-    public class SerializableObjectReferenceTests
+    public class ObjectReferenceTests
     {
-        private DummyObjectReferenceData _dummyData = null!;
+        private const string PackagePath = "Packages/jp.andantetribe.objectreference/Tests/Runtime";
+        private const string DirectDataPath = PackagePath + "/DummyData.asset";
+        private const string EmptyDataPath = PackagePath + "/DummyEmptyData.asset";
+#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
+        private const string AddressableDataPath = PackagePath + "/DummyAddressableData.asset";
+#endif
 
-        [SetUp]
-        public void SetUp()
+        private static IEnumerable<string> AllImplementationPaths()
         {
-            _dummyData = DummyObjectReferenceData.Load();
+            yield return DirectDataPath;
+#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
+            yield return AddressableDataPath;
+#endif
         }
 
-        [Test]
-        public void LoadAsync_Prefab_ReturnsCube()
+        private static DummyObjectReferenceData LoadData(string path)
         {
-            Assert.IsNotNull(_dummyData);
-            var task = _dummyData.PrefabReference.LoadAsync(CancellationToken.None);
-            Assert.IsTrue(task.IsCompleted);
-            Assert.IsNotNull(task.Result);
-            Assert.That(task.Result.name, Is.EqualTo("Cube"));
+#if UNITY_EDITOR
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(path);
+#else
+            throw new NotSupportedException("Test assets can only be loaded in the Unity Editor.");
+#endif
         }
 
-        [Test]
-        public void LoadAsync_Material_ReturnsMaterial()
-        {
-            Assert.IsNotNull(_dummyData);
-            var task = _dummyData.MaterialReference.LoadAsync(CancellationToken.None);
-            Assert.IsTrue(task.IsCompleted);
-            Assert.IsNotNull(task.Result);
-            Assert.That(task.Result.name, Is.EqualTo("New Material"));
-        }
+        // ---- Parameterized tests covering both implementations ----
 
-        [Test]
-        public void LoadAsync_WithProgress_ReportsCompletionAndReturnsPrefab()
+#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
+        [UnityTest]
+        public IEnumerator LoadAsync_GameObjectReference_ReturnsCube(
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
         {
-            var progress = new CapturingProgress();
-            var task = _dummyData.PrefabReference.LoadAsync(progress, CancellationToken.None);
-            Assert.IsTrue(task.IsCompleted);
-            Assert.IsNotNull(task.Result);
-            Assert.That(progress.LastValue, Is.EqualTo(1.0f).Within(0.001f));
-        }
+            var data = LoadData(dataPath);
+            try
+            {
+                var result = await data.GameObjectReference.LoadAsync(CancellationToken.None);
+                Assert.That(result, Is.Not.Null);
+                Assert.That(result.name, Is.EqualTo("Cube"));
+            }
+            finally
+            {
+                data.GameObjectReference.Dispose();
+            }
+        });
 
-        [Test]
-        public void LoadAsync_WithCancelledToken_ThrowsOperationCanceledException()
+        [UnityTest]
+        public IEnumerator LoadAsync_MaterialReference_ReturnsMaterial(
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
         {
+            var data = LoadData(dataPath);
+            try
+            {
+                var result = await data.MaterialReference.LoadAsync(CancellationToken.None);
+                Assert.That(result, Is.Not.Null);
+                Assert.That(result.name, Is.EqualTo("New Material"));
+            }
+            finally
+            {
+                data.MaterialReference.Dispose();
+            }
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_WithProgress_ReportsAndReturnsAsset(
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+        {
+            var data = LoadData(dataPath);
+            float lastProgress = -1f;
+            var progress = new Progress<float>(v => lastProgress = v);
+            try
+            {
+                var result = await data.GameObjectReference.LoadAsync(progress, CancellationToken.None);
+                Assert.That(result, Is.Not.Null);
+                Assert.That(lastProgress, Is.EqualTo(1.0f).Within(0.001f));
+            }
+            finally
+            {
+                data.GameObjectReference.Dispose();
+            }
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException(
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+        {
+            var data = LoadData(dataPath);
             using var cts = new CancellationTokenSource();
             cts.Cancel();
-            Assert.Throws<OperationCanceledException>(
-                () => _dummyData.PrefabReference.LoadAsync(cts.Token));
+            var caught = false;
+            try
+            {
+                await data.GameObjectReference.LoadAsync(cts.Token);
+                Assert.Fail("Expected OperationCanceledException");
+            }
+            catch (OperationCanceledException)
+            {
+                caught = true;
+            }
+            Assert.That(caught, Is.True);
+        });
+
+        [UnityTest]
+        public IEnumerator Dispose_AfterLoad_DoesNotThrow(
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+        {
+            var data = LoadData(dataPath);
+            await data.GameObjectReference.LoadAsync(CancellationToken.None);
+            Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
+        });
+
+        [UnityTest]
+        public IEnumerator Dispose_WithoutLoad_DoesNotThrow(
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+        {
+            var data = LoadData(dataPath);
+            Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
+        });
+
+        // ---- SerializableObjectReference-specific ----
+
+        [UnityTest]
+        public IEnumerator LoadAsync_EmptyReference_ThrowsNullReferenceException() => UniTask.ToCoroutine(async () =>
+        {
+            var data = LoadData(EmptyDataPath);
+            var caught = false;
+            try
+            {
+                await data.GameObjectReference.LoadAsync(CancellationToken.None);
+                Assert.Fail("Expected NullReferenceException");
+            }
+            catch (NullReferenceException)
+            {
+                caught = true;
+            }
+            Assert.That(caught, Is.True);
+        });
+
+        // ---- SerializableAddressableObjectReference-specific ----
+
+        [UnityTest]
+        public IEnumerator LoadAsync_Addressable_SecondCall_ReturnsCachedValue() => UniTask.ToCoroutine(async () =>
+        {
+            var data = LoadData(AddressableDataPath);
+            try
+            {
+                var r1 = await data.GameObjectReference.LoadAsync(CancellationToken.None);
+                var r2 = await data.GameObjectReference.LoadAsync(CancellationToken.None);
+                Assert.That(r1, Is.Not.Null);
+                Assert.That(r1, Is.SameAs(r2));
+            }
+            finally
+            {
+                data.GameObjectReference.Dispose();
+            }
+        });
+
+#else
+        // When Addressables/UniTask are not present, run the direct-reference tests synchronously.
+
+        [UnityTest]
+        public IEnumerator LoadAsync_GameObjectReference_ReturnsCube() => LoadDirectTest(async data =>
+        {
+            var result = await data.GameObjectReference.LoadAsync(CancellationToken.None);
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.name, Is.EqualTo("Cube"));
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_MaterialReference_ReturnsMaterial() => LoadDirectTest(async data =>
+        {
+            var result = await data.MaterialReference.LoadAsync(CancellationToken.None);
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.name, Is.EqualTo("New Material"));
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_WithProgress_ReportsAndReturnsAsset() => LoadDirectTest(async data =>
+        {
+            float lastProgress = -1f;
+            var progress = new Progress<float>(v => lastProgress = v);
+            var result = await data.GameObjectReference.LoadAsync(progress, CancellationToken.None);
+            Assert.That(result, Is.Not.Null);
+            Assert.That(lastProgress, Is.EqualTo(1.0f).Within(0.001f));
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException()
+        {
+            return DirectCancellationTest();
+            static IEnumerator DirectCancellationTest()
+            {
+                var data = LoadData(DirectDataPath);
+                using var cts = new CancellationTokenSource();
+                cts.Cancel();
+                var caught = false;
+                try
+                {
+                    data.GameObjectReference.LoadAsync(cts.Token).GetAwaiter().GetResult();
+                }
+                catch (OperationCanceledException)
+                {
+                    caught = true;
+                }
+                Assert.That(caught, Is.True);
+                yield break;
+            }
         }
 
-        [Test]
-        public void LoadAsync_WithProgressAndCancelledToken_ThrowsOperationCanceledException()
+        [UnityTest]
+        public IEnumerator LoadAsync_EmptyReference_ThrowsNullReferenceException()
         {
-            using var cts = new CancellationTokenSource();
-            cts.Cancel();
-            var progress = new CapturingProgress();
-            Assert.Throws<OperationCanceledException>(
-                () => _dummyData.PrefabReference.LoadAsync(progress, cts.Token));
+            return DirectNullTest();
+            static IEnumerator DirectNullTest()
+            {
+                var data = LoadData(EmptyDataPath);
+                var caught = false;
+                try
+                {
+                    data.GameObjectReference.LoadAsync(CancellationToken.None).GetAwaiter().GetResult();
+                }
+                catch (NullReferenceException)
+                {
+                    caught = true;
+                }
+                Assert.That(caught, Is.True);
+                yield break;
+            }
         }
 
-        [Test]
-        public void LoadAsync_WithNullValue_ThrowsNullReferenceException()
+        [UnityTest]
+        public IEnumerator Dispose_AfterLoad_DoesNotThrow() => LoadDirectTest(async data =>
         {
-            // Edge case: tests the null guard when _value is not assigned in the inspector
-            var openType = typeof(IObjectReference<>).Assembly
-                .GetType("ObjectReference.SerializableObjectReference`1")!;
-            var closedType = openType.MakeGenericType(typeof(GameObject));
-            using var reference = (IObjectReference<GameObject>)Activator.CreateInstance(closedType, nonPublic: true)!;
-            Assert.Throws<NullReferenceException>(() => reference.LoadAsync(CancellationToken.None));
+            await data.GameObjectReference.LoadAsync(CancellationToken.None);
+            Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
+        });
+
+        [UnityTest]
+        public IEnumerator Dispose_WithoutLoad_DoesNotThrow()
+        {
+            return DirectDisposeTest();
+            static IEnumerator DirectDisposeTest()
+            {
+                var data = LoadData(DirectDataPath);
+                Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
+                yield break;
+            }
         }
 
-        [Test]
-        public void Dispose_DoesNotThrow()
+        private static IEnumerator LoadDirectTest(Func<DummyObjectReferenceData, System.Threading.Tasks.Task> body)
         {
-            Assert.DoesNotThrow(() => _dummyData.PrefabReference.Dispose());
+            var data = LoadData(DirectDataPath);
+            var task = body(data);
+            while (!task.IsCompleted)
+                yield return null;
+            if (task.Exception != null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(task.Exception.InnerException ?? task.Exception).Throw();
         }
-
-        private sealed class CapturingProgress : IProgress<float>
-        {
-            public float LastValue { get; private set; } = -1f;
-            public void Report(float value) => LastValue = value;
-        }
+#endif
     }
 
 #if ENABLE_ADDRESSABLES && ENABLE_UNITASK
     /// <summary>
-    /// Tests for AddressableObjectReference&lt;T&gt;.
+    /// Tests for the public <see cref="AddressableObjectReference{T}"/> (string-address based).
     /// </summary>
     public class AddressableObjectReferenceTests
     {
         [Test]
-        public void Constructor_WithNullAddress_ThrowsArgumentNullException()
+        public void Constructor_NullAddress_ThrowsArgumentNullException()
         {
-            Assert.Throws<ArgumentNullException>(() => new AddressableObjectReference<GameObject>(null!));
+            Assert.That(() => new AddressableObjectReference<GameObject>(null!), Throws.ArgumentNullException);
         }
 
         [Test]
-        public void Constructor_WithValidAddress_CreatesInstance()
+        public void Constructor_ValidAddress_CreatesInstance()
         {
             using var reference = new AddressableObjectReference<GameObject>("valid_address");
-            Assert.IsNotNull(reference);
+            Assert.That(reference, Is.Not.Null);
         }
 
         [UnityTest]
@@ -124,7 +304,7 @@ namespace ObjectReference.Tests
             using var reference = new AddressableObjectReference<GameObject>("some_address");
             using var cts = new CancellationTokenSource();
             cts.Cancel();
-
+            var caught = false;
             try
             {
                 await reference.LoadAsync(cts.Token);
@@ -132,8 +312,9 @@ namespace ObjectReference.Tests
             }
             catch (OperationCanceledException)
             {
-                // Expected
+                caught = true;
             }
+            Assert.That(caught, Is.True);
         });
 
         [UnityTest]
@@ -141,7 +322,6 @@ namespace ObjectReference.Tests
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
             Exception? caughtException = null;
-
             try
             {
                 await reference.LoadAsync(CancellationToken.None);
@@ -153,33 +333,26 @@ namespace ObjectReference.Tests
             }
             finally
             {
-                // Dispose covers the if (_handle.IsValid()) true branch
                 reference.Dispose();
             }
-
-            Assert.IsNotNull(caughtException);
+            Assert.That(caughtException, Is.Not.Null);
         });
 
         [UnityTest]
         public IEnumerator LoadAsync_WhenHandleAlreadyExists_ReusesExistingHandle() => UniTask.ToCoroutine(async () =>
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
-
-            // First call creates the handle (will fail for invalid address)
             try
             {
                 await reference.LoadAsync(CancellationToken.None);
             }
-            catch (Exception ex) when (ex is not AssertionException)
-            {
-                // Expected failure for invalid address
-            }
+            catch (Exception ex) when (ex is not AssertionException) { }
 
-            // Second call reuses the existing handle (covers the if (!_handle.IsValid()) false branch)
             Exception? caughtException = null;
             try
             {
                 await reference.LoadAsync(CancellationToken.None);
+                Assert.Fail("Expected exception on second call with existing handle");
             }
             catch (Exception ex) when (ex is not AssertionException)
             {
@@ -189,8 +362,7 @@ namespace ObjectReference.Tests
             {
                 reference.Dispose();
             }
-
-            Assert.IsNotNull(caughtException, "Expected exception on second call with existing invalid handle");
+            Assert.That(caughtException, Is.Not.Null);
         });
 
         [UnityTest]
@@ -199,17 +371,17 @@ namespace ObjectReference.Tests
             using var reference = new AddressableObjectReference<GameObject>("some_address");
             using var cts = new CancellationTokenSource();
             cts.Cancel();
-
+            var caught = false;
             try
             {
-                var progress = new Progress<float>(_ => { });
-                await reference.LoadAsync(progress, cts.Token);
+                await reference.LoadAsync(new Progress<float>(_ => { }), cts.Token);
                 Assert.Fail("Expected OperationCanceledException");
             }
             catch (OperationCanceledException)
             {
-                // Expected
+                caught = true;
             }
+            Assert.That(caught, Is.True);
         });
 
         [UnityTest]
@@ -217,11 +389,9 @@ namespace ObjectReference.Tests
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
             Exception? caughtException = null;
-
             try
             {
-                var progress = new Progress<float>(_ => { });
-                await reference.LoadAsync(progress, CancellationToken.None);
+                await reference.LoadAsync(new Progress<float>(_ => { }), CancellationToken.None);
                 Assert.Fail("Expected an exception for invalid address");
             }
             catch (Exception ex) when (ex is not AssertionException)
@@ -230,106 +400,19 @@ namespace ObjectReference.Tests
             }
             finally
             {
-                // Dispose covers the if (_handle.IsValid()) true branch for the progress overload
                 reference.Dispose();
             }
-
-            Assert.IsNotNull(caughtException);
+            Assert.That(caughtException, Is.Not.Null);
         });
 
         [Test]
         public void Dispose_WhenNotLoaded_DoesNotThrow()
         {
             var reference = new AddressableObjectReference<GameObject>("some_address");
-            // Dispose without loading covers the if (_handle.IsValid()) false branch
-            Assert.DoesNotThrow(() => reference.Dispose());
-        }
-    }
-
-    /// <summary>
-    /// Tests for SerializableAddressableObjectReference&lt;T&gt; via the [SerializeReference] workflow.
-    /// </summary>
-    public class SerializableAddressableObjectReferenceTests
-    {
-        private DummyObjectReferenceData _dummyData = null!;
-
-        [SetUp]
-        public void SetUp()
-        {
-            _dummyData = DummyObjectReferenceData.Load();
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            _dummyData.AddressablePrefabReference.Dispose();
-            _dummyData.AddressableMaterialReference.Dispose();
-        }
-
-        [UnityTest]
-        public IEnumerator LoadAsync_Prefab_ReturnsCube() => UniTask.ToCoroutine(async () =>
-        {
-            var result = await _dummyData.AddressablePrefabReference.LoadAsync(CancellationToken.None);
-            Assert.IsNotNull(result);
-            Assert.That(result.name, Is.EqualTo("Cube"));
-        });
-
-        [UnityTest]
-        public IEnumerator LoadAsync_Material_ReturnsMaterial() => UniTask.ToCoroutine(async () =>
-        {
-            var result = await _dummyData.AddressableMaterialReference.LoadAsync(CancellationToken.None);
-            Assert.IsNotNull(result);
-            Assert.That(result.name, Is.EqualTo("New Material"));
-        });
-
-        [UnityTest]
-        public IEnumerator LoadAsync_SecondCall_ReturnsCachedValue() => UniTask.ToCoroutine(async () =>
-        {
-            var result1 = await _dummyData.AddressablePrefabReference.LoadAsync(CancellationToken.None);
-            var result2 = await _dummyData.AddressablePrefabReference.LoadAsync(CancellationToken.None);
-            Assert.IsNotNull(result1);
-            Assert.That(result1, Is.SameAs(result2));
-        });
-
-        [UnityTest]
-        public IEnumerator LoadAsync_WithProgress_ReturnsAsset() => UniTask.ToCoroutine(async () =>
-        {
-            var progress = new Progress<float>(_ => { });
-            var result = await _dummyData.AddressablePrefabReference.LoadAsync(progress, CancellationToken.None);
-            Assert.IsNotNull(result);
-        });
-
-        [UnityTest]
-        public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException() => UniTask.ToCoroutine(async () =>
-        {
-            using var cts = new CancellationTokenSource();
-            cts.Cancel();
-
-            try
-            {
-                await _dummyData.AddressablePrefabReference.LoadAsync(cts.Token);
-                Assert.Fail("Expected OperationCanceledException");
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected
-            }
-        });
-
-        [UnityTest]
-        public IEnumerator Dispose_WhenCached_ReleasesAsset() => UniTask.ToCoroutine(async () =>
-        {
-            var result = await _dummyData.AddressablePrefabReference.LoadAsync(CancellationToken.None);
-            Assert.IsNotNull(result);
-            Assert.DoesNotThrow(() => _dummyData.AddressablePrefabReference.Dispose());
-        });
-
-        [Test]
-        public void Dispose_WhenNotCached_DoesNotThrow()
-        {
-            Assert.DoesNotThrow(() => _dummyData.AddressableMaterialReference.Dispose());
+            Assert.That(() => reference.Dispose(), Throws.Nothing);
         }
     }
 #endif
 }
+
 

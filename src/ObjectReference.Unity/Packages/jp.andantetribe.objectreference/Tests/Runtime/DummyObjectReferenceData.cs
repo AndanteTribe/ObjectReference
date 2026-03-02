@@ -9,30 +9,18 @@ namespace ObjectReference.Tests
     public class DummyObjectReferenceData : ScriptableObject
     {
         [SerializeReference]
-        private IObjectReference<GameObject> _prefabReference = null!;
+        private IObjectReference<GameObject> _gameObjectReference = null!;
 
         [SerializeReference]
         private IObjectReference<Material> _materialReference = null!;
 
-        [SerializeReference]
-        private IObjectReference<GameObject> _addressablePrefabReference = null!;
-
-        [SerializeReference]
-        private IObjectReference<Material> _addressableMaterialReference = null!;
-
-        public IObjectReference<GameObject> PrefabReference => _prefabReference;
+        public IObjectReference<GameObject> GameObjectReference => _gameObjectReference;
         public IObjectReference<Material> MaterialReference => _materialReference;
 
-#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
-        public IObjectReference<GameObject> AddressablePrefabReference => _addressablePrefabReference;
-        public IObjectReference<Material> AddressableMaterialReference => _addressableMaterialReference;
-#endif
-
-        public static DummyObjectReferenceData Load()
+        public static DummyObjectReferenceData Load(string path)
         {
 #if UNITY_EDITOR
-            return UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(
-                "Packages/jp.andantetribe.objectreference/Tests/Runtime/DummyData.asset");
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(path);
 #else
             throw new System.NotSupportedException("DummyObjectReferenceData can only be loaded in the Unity Editor.");
 #endif
