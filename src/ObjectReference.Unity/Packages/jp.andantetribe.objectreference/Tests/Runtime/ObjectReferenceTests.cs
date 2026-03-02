@@ -7,9 +7,6 @@ using System.Threading;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
-using Cysharp.Threading.Tasks;
-#endif
 
 namespace ObjectReference.Tests
 {
@@ -46,10 +43,9 @@ namespace ObjectReference.Tests
 
         // ---- Parameterized tests covering both implementations ----
 
-#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
         [UnityTest]
         public IEnumerator LoadAsync_GameObjectReference_ReturnsCube(
-            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => new ToCoroutineEnumerator(async () =>
         {
             var data = LoadData(dataPath);
             try
@@ -66,7 +62,7 @@ namespace ObjectReference.Tests
 
         [UnityTest]
         public IEnumerator LoadAsync_MaterialReference_ReturnsMaterial(
-            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => new ToCoroutineEnumerator(async () =>
         {
             var data = LoadData(dataPath);
             try
@@ -83,7 +79,7 @@ namespace ObjectReference.Tests
 
         [UnityTest]
         public IEnumerator LoadAsync_WithProgress_ReportsAndReturnsAsset(
-            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => new ToCoroutineEnumerator(async () =>
         {
             var data = LoadData(dataPath);
             float lastProgress = -1f;
@@ -102,7 +98,7 @@ namespace ObjectReference.Tests
 
         [UnityTest]
         public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException(
-            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => new ToCoroutineEnumerator(async () =>
         {
             var data = LoadData(dataPath);
             using var cts = new CancellationTokenSource();
@@ -122,7 +118,7 @@ namespace ObjectReference.Tests
 
         [UnityTest]
         public IEnumerator Dispose_AfterLoad_DoesNotThrow(
-            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => new ToCoroutineEnumerator(async () =>
         {
             var data = LoadData(dataPath);
             await data.GameObjectReference.LoadAsync(CancellationToken.None);
@@ -131,100 +127,13 @@ namespace ObjectReference.Tests
 
         [UnityTest]
         public IEnumerator Dispose_WithoutLoad_DoesNotThrow(
-            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => UniTask.ToCoroutine(async () =>
+            [ValueSource(nameof(AllImplementationPaths))] string dataPath) => new ToCoroutineEnumerator(async () =>
         {
             var data = LoadData(dataPath);
             Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
         });
 
         // ---- SerializableObjectReference-specific ----
-
-        [UnityTest]
-        public IEnumerator LoadAsync_EmptyReference_ThrowsNullReferenceException() => UniTask.ToCoroutine(async () =>
-        {
-            var data = LoadData(EmptyDataPath);
-            var caught = false;
-            try
-            {
-                await data.GameObjectReference.LoadAsync(CancellationToken.None);
-                Assert.Fail("Expected NullReferenceException");
-            }
-            catch (NullReferenceException)
-            {
-                caught = true;
-            }
-            Assert.That(caught, Is.True);
-        });
-
-        // ---- SerializableAddressableObjectReference-specific ----
-
-        [UnityTest]
-        public IEnumerator LoadAsync_Addressable_SecondCall_ReturnsCachedValue() => UniTask.ToCoroutine(async () =>
-        {
-            var data = LoadData(AddressableDataPath);
-            try
-            {
-                var r1 = await data.GameObjectReference.LoadAsync(CancellationToken.None);
-                var r2 = await data.GameObjectReference.LoadAsync(CancellationToken.None);
-                Assert.That(r1, Is.Not.Null);
-                Assert.That(r1, Is.SameAs(r2));
-            }
-            finally
-            {
-                data.GameObjectReference.Dispose();
-            }
-        });
-
-#else
-        // When Addressables/UniTask are not present, run the direct-reference tests using ToCoroutineEnumerator.
-
-        [UnityTest]
-        public IEnumerator LoadAsync_GameObjectReference_ReturnsCube() => new ToCoroutineEnumerator(async () =>
-        {
-            var data = LoadData(DirectDataPath);
-            var result = await data.GameObjectReference.LoadAsync(CancellationToken.None);
-            Assert.That(result, Is.Not.Null);
-            Assert.That(result.name, Is.EqualTo("Cube"));
-        });
-
-        [UnityTest]
-        public IEnumerator LoadAsync_MaterialReference_ReturnsMaterial() => new ToCoroutineEnumerator(async () =>
-        {
-            var data = LoadData(DirectDataPath);
-            var result = await data.MaterialReference.LoadAsync(CancellationToken.None);
-            Assert.That(result, Is.Not.Null);
-            Assert.That(result.name, Is.EqualTo("New Material"));
-        });
-
-        [UnityTest]
-        public IEnumerator LoadAsync_WithProgress_ReportsAndReturnsAsset() => new ToCoroutineEnumerator(async () =>
-        {
-            var data = LoadData(DirectDataPath);
-            float lastProgress = -1f;
-            var progress = new Progress<float>(v => lastProgress = v);
-            var result = await data.GameObjectReference.LoadAsync(progress, CancellationToken.None);
-            Assert.That(result, Is.Not.Null);
-            Assert.That(lastProgress, Is.EqualTo(1.0f).Within(0.001f));
-        });
-
-        [UnityTest]
-        public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException() => new ToCoroutineEnumerator(async () =>
-        {
-            var data = LoadData(DirectDataPath);
-            using var cts = new CancellationTokenSource();
-            cts.Cancel();
-            var caught = false;
-            try
-            {
-                await data.GameObjectReference.LoadAsync(cts.Token);
-                Assert.Fail("Expected OperationCanceledException");
-            }
-            catch (OperationCanceledException)
-            {
-                caught = true;
-            }
-            Assert.That(caught, Is.True);
-        });
 
         [UnityTest]
         public IEnumerator LoadAsync_EmptyReference_ThrowsNullReferenceException() => new ToCoroutineEnumerator(async () =>
@@ -243,19 +152,24 @@ namespace ObjectReference.Tests
             Assert.That(caught, Is.True);
         });
 
-        [UnityTest]
-        public IEnumerator Dispose_AfterLoad_DoesNotThrow() => new ToCoroutineEnumerator(async () =>
-        {
-            var data = LoadData(DirectDataPath);
-            await data.GameObjectReference.LoadAsync(CancellationToken.None);
-            Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
-        });
+#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
+        // ---- SerializableAddressableObjectReference-specific ----
 
         [UnityTest]
-        public IEnumerator Dispose_WithoutLoad_DoesNotThrow() => new ToCoroutineEnumerator(async () =>
+        public IEnumerator LoadAsync_Addressable_SecondCall_ReturnsCachedValue() => new ToCoroutineEnumerator(async () =>
         {
-            var data = LoadData(DirectDataPath);
-            Assert.That(() => data.GameObjectReference.Dispose(), Throws.Nothing);
+            var data = LoadData(AddressableDataPath);
+            try
+            {
+                var r1 = await data.GameObjectReference.LoadAsync(CancellationToken.None);
+                var r2 = await data.GameObjectReference.LoadAsync(CancellationToken.None);
+                Assert.That(r1, Is.Not.Null);
+                Assert.That(r1, Is.SameAs(r2));
+            }
+            finally
+            {
+                data.GameObjectReference.Dispose();
+            }
         });
 #endif
     }
@@ -280,7 +194,7 @@ namespace ObjectReference.Tests
         }
 
         [UnityTest]
-        public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException() => UniTask.ToCoroutine(async () =>
+        public IEnumerator LoadAsync_WithCancelledToken_ThrowsOperationCanceledException() => new ToCoroutineEnumerator(async () =>
         {
             using var reference = new AddressableObjectReference<GameObject>("some_address");
             using var cts = new CancellationTokenSource();
@@ -299,7 +213,7 @@ namespace ObjectReference.Tests
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_WithInvalidAddress_ThrowsException() => UniTask.ToCoroutine(async () =>
+        public IEnumerator LoadAsync_WithInvalidAddress_ThrowsException() => new ToCoroutineEnumerator(async () =>
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
             Exception? caughtException = null;
@@ -320,7 +234,7 @@ namespace ObjectReference.Tests
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_WhenHandleAlreadyExists_ReusesExistingHandle() => UniTask.ToCoroutine(async () =>
+        public IEnumerator LoadAsync_WhenHandleAlreadyExists_ReusesExistingHandle() => new ToCoroutineEnumerator(async () =>
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
             try
@@ -347,7 +261,7 @@ namespace ObjectReference.Tests
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_WithProgressAndCancelledToken_ThrowsOperationCanceledException() => UniTask.ToCoroutine(async () =>
+        public IEnumerator LoadAsync_WithProgressAndCancelledToken_ThrowsOperationCanceledException() => new ToCoroutineEnumerator(async () =>
         {
             using var reference = new AddressableObjectReference<GameObject>("some_address");
             using var cts = new CancellationTokenSource();
@@ -366,7 +280,7 @@ namespace ObjectReference.Tests
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_WithProgressAndInvalidAddress_ThrowsException() => UniTask.ToCoroutine(async () =>
+        public IEnumerator LoadAsync_WithProgressAndInvalidAddress_ThrowsException() => new ToCoroutineEnumerator(async () =>
         {
             var reference = new AddressableObjectReference<GameObject>("__invalid_address_for_test__");
             Exception? caughtException = null;
