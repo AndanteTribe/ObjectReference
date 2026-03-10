@@ -53,7 +53,7 @@ jobs:
         if: always()
         with:
           name: Coverage Results
-          path: CodeCoverage
+          path: src/ObjectReference.Unity/CodeCoverage
           retention-days: 2
       - name: Upload Coverage Report
         run: |
