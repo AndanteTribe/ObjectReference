@@ -23,6 +23,7 @@ namespace ObjectReference.Tests
         public const string DirectDataPath = "Assets/Tests/Runtime/DummyData.asset";
         public const string EmptyDataPath = "Assets/Tests/Runtime/DummyEmptyData.asset";
         public const string AddressableDataPath = "Assets/Tests/Runtime/DummyAddressableData.asset";
+        public const string NullSerializableDataPath = "Assets/Tests/Runtime/DummyNullSerializableData.asset";
         public static IEnumerable<string> AllImplementationPaths()
         {
             yield return DirectDataPath;
@@ -44,6 +45,16 @@ namespace ObjectReference.Tests
         {
 #if UNITY_EDITOR
             var data = UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(EmptyDataPath);
+            return data;
+#else
+            throw new NotSupportedException("Test assets can only be loaded in the Unity Editor.");
+#endif
+        }
+
+        public static DummyObjectReferenceData LoadNullSerializableData()
+        {
+#if UNITY_EDITOR
+            var data = UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(NullSerializableDataPath);
             return data;
 #else
             throw new NotSupportedException("Test assets can only be loaded in the Unity Editor.");
