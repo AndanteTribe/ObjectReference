@@ -73,7 +73,9 @@ namespace ObjectReference
                 _handle = Addressables.LoadAssetAsync<T>(_address);
             }
 
-            return await _handle.ToUniTask(progress: progress, cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+            var result = await _handle.ToUniTask(progress: progress, cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+            progress.Report(1.0f);
+            return result;
         }
 
         /// <inheritdoc />

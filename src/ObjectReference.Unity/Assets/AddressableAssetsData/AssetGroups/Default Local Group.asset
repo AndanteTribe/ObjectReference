@@ -15,14 +15,16 @@ MonoBehaviour:
   m_GroupName: Default Local Group
   m_GUID: 0d4ef0b78ca49d54899f0c79f3ff91f7
   m_SerializeEntries:
-  - m_GUID: 8df65f68cf0539e438a06681e8485f72
-    m_Address: Assets/Cube.prefab
-    m_ReadOnly: 0
-    m_Labels: []
   - m_GUID: 0f000f9de0c56ed438ed837247e4bacb
     m_Address: Assets/New Material.mat
     m_ReadOnly: 0
-    m_Labels: []
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8df65f68cf0539e438a06681e8485f72
+    m_Address: Assets/Cube.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 98a5a1939671a8d4fbbe8135c6004279, type: 2}
   m_SchemaSet:
