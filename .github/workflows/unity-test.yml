@@ -43,10 +43,6 @@ jobs:
           unityVersion: auto
           testMode: playMode
           coverageOptions: 'generateHtmlReport;generateAdditionalReports;assemblyFilters:+ObjectReference'
-      - name: List ScriptAssemblies
-        if: always()
-        run: |
-          ls -la src/ObjectReference.Unity/Library/ScriptAssemblies || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
