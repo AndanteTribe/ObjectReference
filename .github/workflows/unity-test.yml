@@ -47,13 +47,13 @@ jobs:
         if: always()
         with:
           name: Test results
-          path: artifacts
+          path: ${{ steps.tests.outputs.artifactsPath }}
           retention-days: 2
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: Coverage Results
-          path: src/ObjectReference.Unity/CodeCoverage
+          path: ${{ steps.tests.outputs.coveragePath }}
           retention-days: 2
       - name: Upload Coverage Report
         run: |
