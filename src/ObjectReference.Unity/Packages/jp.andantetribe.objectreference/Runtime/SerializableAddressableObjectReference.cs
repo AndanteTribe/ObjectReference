@@ -21,7 +21,7 @@ namespace ObjectReference
         public async ValueTask<T> LoadAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if(_cached == null)
+            if (_cached == null)
             {
                 _cached = await _value.LoadAssetAsync<T>().ToUniTask(cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
             }

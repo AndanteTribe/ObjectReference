@@ -34,7 +34,7 @@ namespace ObjectReference.Tests
 #if UNITY_EDITOR
             var data = UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(DirectDataPath);
             var addressableData = UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(AddressableDataPath);
-            return new[] { data , addressableData};
+            return new[] { data , addressableData };
 #else
             throw new NotSupportedException("Test assets can only be loaded in the Unity Editor.");
 #endif
