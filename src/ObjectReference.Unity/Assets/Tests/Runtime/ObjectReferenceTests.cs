@@ -65,7 +65,7 @@ namespace ObjectReference.Tests
             {
                 var result = await data.GameObjectReference.LoadAsync(progress, CancellationToken.None);
                 Assert.That(result, Is.Not.Null);
-                await UniTask.NextFrame();
+                await UniTask.Delay(TimeSpan.FromSeconds(1));
                 Assert.That(lastProgress, Is.EqualTo(1.0f).Within(0.001f));
             }
             finally
