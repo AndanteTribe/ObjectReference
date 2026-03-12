@@ -2,6 +2,7 @@
 [![Releases](https://img.shields.io/github/release/AndanteTribe/ObjectReference.svg)](https://github.com/AndanteTribe/ObjectReference/releases)
 [![GitHub license](https://img.shields.io/github/license/AndanteTribe/ObjectReference.svg)](./LICENSE)
 [![openupm](https://img.shields.io/npm/v/jp.andantetribe.objectreference?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/jp.andantetribe.objectreference/)
+[![CI](https://github.com/AndanteTribe/ObjectReference/actions/workflows/unity-test.yml/badge.svg)](https://github.com/AndanteTribe/ObjectReference/actions/workflows/unity-test.yml)
 
 [English](README.md) | 日本語
 
