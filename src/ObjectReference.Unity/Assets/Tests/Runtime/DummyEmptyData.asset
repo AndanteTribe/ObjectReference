@@ -11,19 +11,13 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0, type: 3}
   m_Name: DummyEmptyData
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: ObjectReference.Runtime.Tests::ObjectReference.Tests.DummyObjectReferenceData
   _gameObjectReference:
-    rid: 7722165880037343250
+    rid: -2
   _materialReference:
-    rid: 7722165880037343251
+    rid: -2
   references:
     version: 2
     RefIds:
-    - rid: 7722165880037343250
-      type: {class: SerializableObjectReference`1[[UnityEngine.GameObject, UnityEngine.CoreModule]], ObjectReference.Runtime}
-      data:
-        _value: {fileID: 0}
-    - rid: 7722165880037343251
-      type: {class: SerializableObjectReference`1[[UnityEngine.Material, UnityEngine.CoreModule]], ObjectReference.Runtime}
-      data:
-        _value: {fileID: 0}
+    - rid: -2
+      type: {class: , ns: , asm: }

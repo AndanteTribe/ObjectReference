@@ -4,9 +4,13 @@ using System;
 using System.Collections;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using NUnit.Framework;
+using UnityEngine.TestTools;
 
 namespace ObjectReference.Tests
 {
+    [ExcludeFromCoverage]
+    [Ignore("This is a utility class for testing")]
     internal sealed class ToCoroutineEnumerator : IEnumerator
     {
         private readonly Func<ValueTask> _task;

@@ -1,10 +1,13 @@
 #nullable enable
 
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ObjectReference.Tests
 {
+    [ExcludeFromCoverage]
     [Ignore("This is a dummy class for testing purposes. It should not be included in the test suite.")]
     public class DummyObjectReferenceData : ScriptableObject
     {
@@ -17,13 +20,52 @@ namespace ObjectReference.Tests
         public IObjectReference<GameObject> GameObjectReference => _gameObjectReference;
         public IObjectReference<Material> MaterialReference => _materialReference;
 
-        public static DummyObjectReferenceData Load(string path)
+        public const string DirectDataPath = "Assets/Tests/Runtime/DummyData.asset";
+        public const string EmptyDataPath = "Assets/Tests/Runtime/DummyEmptyData.asset";
+        public const string AddressableDataPath = "Assets/Tests/Runtime/DummyAddressableData.asset";
+        public const string NullSerializableDataPath = "Assets/Tests/Runtime/DummyNullSerializableData.asset";
+        public static IEnumerable<string> AllImplementationPaths()
+        {
+            yield return DirectDataPath;
+            yield return AddressableDataPath;
+        }
+
+        public static DummyObjectReferenceData[] LoadData()
         {
 #if UNITY_EDITOR
-            return UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(path);
+            var data = UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(DirectDataPath);
+            var addressableData = UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(AddressableDataPath);
+            return new[] { data , addressableData };
 #else
-            throw new System.NotSupportedException("DummyObjectReferenceData can only be loaded in the Unity Editor.");
+            throw new NotSupportedException("Test assets can only be loaded in the Unity Editor.");
 #endif
         }
+
+        public static DummyObjectReferenceData LoadEmptyData()
+        {
+#if UNITY_EDITOR
+            var data = UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(EmptyDataPath);
+            return data;
+#else
+            throw new NotSupportedException("Test assets can only be loaded in the Unity Editor.");
+#endif
+        }
+
+        public static DummyObjectReferenceData LoadNullSerializableData()
+        {
+#if UNITY_EDITOR
+            var data = UnityEditor.AssetDatabase.LoadAssetAtPath<DummyObjectReferenceData>(NullSerializableDataPath);
+            return data;
+#else
+            throw new NotSupportedException("Test assets can only be loaded in the Unity Editor.");
+#endif
+        }
+
+        public enum DataIndex
+        {
+            DirectDataPath = 0,
+            AddressableDataPath = 1
+        }
+
     }
 }

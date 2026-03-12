@@ -21,7 +21,10 @@ namespace ObjectReference
         public async ValueTask<T> LoadAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            _cached ??= await _value.LoadAssetAsync<T>().ToUniTask(cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+            if (_cached == null)
+            {
+                _cached = await _value.LoadAssetAsync<T>().ToUniTask(cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+            }
             return _cached;
         }
 
@@ -29,7 +32,11 @@ namespace ObjectReference
         public async ValueTask<T> LoadAsync(IProgress<float> progress, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            _cached ??= await _value.LoadAssetAsync<T>().ToUniTask(progress: progress, cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+            if (_cached == null)
+            {
+                _cached ??= await _value.LoadAssetAsync<T>().ToUniTask(progress: progress, cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+            }
+            progress.Report(1.0f);
             return _cached;
         }
 
