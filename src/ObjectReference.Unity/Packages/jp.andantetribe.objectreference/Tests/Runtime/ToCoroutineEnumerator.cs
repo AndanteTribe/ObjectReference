@@ -16,8 +16,8 @@ namespace ObjectReference.Tests
         private readonly Func<ValueTask> _task;
         private readonly Action<Exception>? _exceptionHandler;
 
-        private bool _completed = false;
-        private bool _isStarted = false;
+        private bool _completed;
+        private bool _isStarted;
         private ExceptionDispatchInfo? _exception;
 
         public ToCoroutineEnumerator(Func<ValueTask> task, Action<Exception>? exceptionHandler = null)
@@ -25,6 +25,22 @@ namespace ObjectReference.Tests
             _task = task;
             _exceptionHandler = exceptionHandler;
         }
+
+        public object Current => null!;
+
+        public bool MoveNext()
+        {
+            if (!_isStarted)
+            {
+                _isStarted = true;
+                _ = RunTask();
+            }
+
+            _exception?.Throw();
+            return !_completed;
+        }
+
+        void IEnumerator.Reset() => throw new NotSupportedException("Reset is not supported for this enumerator.");
 
         private async ValueTask RunTask()
         {
@@ -48,25 +64,5 @@ namespace ObjectReference.Tests
                 _completed = true;
             }
         }
-
-        public object Current => null!;
-
-        public bool MoveNext()
-        {
-            if (!_isStarted)
-            {
-                _isStarted = true;
-                _ = RunTask();
-            }
-
-            if (_exception != null)
-            {
-                _exception.Throw();
-            }
-
-            return !_completed;
-        }
-
-        void IEnumerator.Reset() => throw new NotSupportedException("Reset is not supported for this enumerator.");
     }
 }
