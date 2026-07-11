@@ -48,7 +48,6 @@ namespace ObjectReference.Tests
                 addressablesImplType,
                 new LRUCacheAllocationStrategy(1000, 1000, 100, 10))
                 ?? throw new InvalidOperationException("Could not create a test Addressables instance.");
-            _addressablesInstanceField.SetValue(null, _testAddressablesInstance);
 
             SetAddressablesField(addressablesImplType, "hasStartedInitialization", true);
             SetAddressablesField(
@@ -59,6 +58,8 @@ namespace ObjectReference.Tests
                 addressablesImplType,
                 "m_OnHandleCompleteAction",
                 new Action<AsyncOperationHandle>(_ => { }));
+
+            _addressablesInstanceField.SetValue(null, _testAddressablesInstance);
 
             _provider = new InMemoryObjectProvider(new Dictionary<string, UnityEngine.Object>
             {
