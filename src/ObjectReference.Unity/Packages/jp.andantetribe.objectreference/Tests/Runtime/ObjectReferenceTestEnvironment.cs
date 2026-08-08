@@ -18,8 +18,10 @@ namespace ObjectReference.Tests
     {
         public const string CubeAddress = "objectreference-tests-cube";
         public const string MaterialAddress = "objectreference-tests-material";
+        public const string MissingAddress = "objectreference-tests-missing";
         public const string CubeGuid = "11111111111111111111111111111111";
         public const string MaterialGuid = "22222222222222222222222222222222";
+        public const string MissingGuid = "33333333333333333333333333333333";
 
         private const BindingFlags InstanceFieldFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
@@ -70,11 +72,13 @@ namespace ObjectReference.Tests
             });
             Addressables.ResourceManager.ResourceProviders.Add(_provider);
 
-            _locator = new ResourceLocationMap("ObjectReferenceTests", 4);
+            _locator = new ResourceLocationMap("ObjectReferenceTests", 6);
             AddLocation(CubeAddress, typeof(GameObject));
             AddLocation(MaterialAddress, typeof(Material));
+            AddLocation(MissingAddress, typeof(GameObject));
             AddLocation(CubeGuid, typeof(GameObject));
             AddLocation(MaterialGuid, typeof(Material));
+            AddLocation(MissingGuid, typeof(GameObject));
             Addressables.AddResourceLocator(_locator);
         }
 
@@ -91,6 +95,24 @@ namespace ObjectReference.Tests
             where T : UnityEngine.Object => CreateSerializableReference<T>(
                 "SerializableAddressableObjectReference`1",
                 new AssetReferenceT<T>(guid));
+
+        public bool HasValidOperationHandle<T>(IObjectReference<T> reference)
+            where T : UnityEngine.Object
+        {
+            var valueField = reference.GetType().GetField("_value", InstanceFieldFlags)
+                ?? throw new MissingFieldException(reference.GetType().FullName, "_value");
+            var assetReference = (AssetReference)valueField.GetValue(reference)!;
+            return assetReference.OperationHandle.IsValid();
+        }
+
+        public bool HasValidOperationHandle<T>(AddressableObjectReference<T> reference)
+            where T : UnityEngine.Object
+        {
+            var handleField = typeof(AddressableObjectReference<T>).GetField("_handle", InstanceFieldFlags)
+                ?? throw new MissingFieldException(typeof(AddressableObjectReference<T>).FullName, "_handle");
+            var handle = (AsyncOperationHandle<T>)handleField.GetValue(reference)!;
+            return handle.IsValid();
+        }
 
         public void Dispose()
         {

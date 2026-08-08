@@ -113,14 +113,72 @@ namespace ObjectReference.Tests
         }
 
         [UnityTest]
-        public IEnumerator LoadAsync_Addressable_SecondCall_ReturnsCachedValue() => new ToCoroutineEnumerator(async () =>
+        public IEnumerator LoadAsync_Addressable_SecondCall_ReturnsCachedValue(
+            [Values(false, true)] bool withProgress) => new ToCoroutineEnumerator(async () =>
         {
             using var reference = Environment.CreateSerializableAddressableReference<GameObject>(
                 ObjectReferenceTestEnvironment.CubeGuid);
             var first = await reference.LoadAsync(CancellationToken.None);
-            var second = await reference.LoadAsync(CancellationToken.None);
+            var progress = new ProgressRecorder();
+            var second = withProgress
+                ? await reference.LoadAsync(progress, CancellationToken.None)
+                : await reference.LoadAsync(CancellationToken.None);
             Assert.That(first, Is.SameAs(Environment.Cube));
             Assert.That(second, Is.SameAs(first));
+            if (withProgress)
+            {
+                Assert.That(progress.Value, Is.EqualTo(1.0f).Within(0.001f));
+            }
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_Addressable_CachedProgressThrows_PreservesHandle() => new ToCoroutineEnumerator(async () =>
+        {
+            using var reference = Environment.CreateSerializableAddressableReference<GameObject>(
+                ObjectReferenceTestEnvironment.CubeGuid);
+            var first = await reference.LoadAsync(CancellationToken.None);
+
+            Exception? caught = null;
+            try
+            {
+                await reference.LoadAsync(new ThrowingProgress(), CancellationToken.None);
+            }
+            catch (Exception exception)
+            {
+                caught = exception;
+            }
+
+            Assert.That(caught, Is.TypeOf<InvalidOperationException>());
+            Assert.That(Environment.HasValidOperationHandle(reference), Is.True);
+            var second = await reference.LoadAsync(CancellationToken.None);
+            Assert.That(second, Is.SameAs(first));
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_Addressable_WhenLoadingFails_ReleasesHandle(
+            [Values(false, true)] bool withProgress) => new ToCoroutineEnumerator(async () =>
+        {
+            using var reference = Environment.CreateSerializableAddressableReference<GameObject>(
+                ObjectReferenceTestEnvironment.MissingGuid);
+            Exception? caught = null;
+            try
+            {
+                if (withProgress)
+                {
+                    await reference.LoadAsync(new ProgressRecorder(), CancellationToken.None);
+                }
+                else
+                {
+                    await reference.LoadAsync(CancellationToken.None);
+                }
+            }
+            catch (Exception exception)
+            {
+                caught = exception;
+            }
+
+            Assert.That(caught, Is.TypeOf<InvalidOperationException>());
+            Assert.That(Environment.HasValidOperationHandle(reference), Is.False);
         });
 
         private IObjectReference<GameObject> CreateGameObjectReference(ReferenceKind kind) => kind switch
@@ -228,13 +286,44 @@ namespace ObjectReference.Tests
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_SecondCall_ReusesCachedHandle() => new ToCoroutineEnumerator(async () =>
+        public IEnumerator LoadAsync_SecondCall_ReusesCachedHandle(
+            [Values(false, true)] bool withProgress) => new ToCoroutineEnumerator(async () =>
         {
             using var reference = new AddressableObjectReference<GameObject>(
                 ObjectReferenceTestEnvironment.CubeAddress);
             var first = await reference.LoadAsync(CancellationToken.None);
-            var second = await reference.LoadAsync(CancellationToken.None);
+            var progress = new ProgressRecorder();
+            var second = withProgress
+                ? await reference.LoadAsync(progress, CancellationToken.None)
+                : await reference.LoadAsync(CancellationToken.None);
             Assert.That(first, Is.SameAs(Environment.Cube));
+            Assert.That(second, Is.SameAs(first));
+            if (withProgress)
+            {
+                Assert.That(progress.Value, Is.EqualTo(1.0f).Within(0.001f));
+            }
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_CachedProgressThrows_PreservesHandle() => new ToCoroutineEnumerator(async () =>
+        {
+            using var reference = new AddressableObjectReference<GameObject>(
+                ObjectReferenceTestEnvironment.CubeAddress);
+            var first = await reference.LoadAsync(CancellationToken.None);
+
+            Exception? caught = null;
+            try
+            {
+                await reference.LoadAsync(new ThrowingProgress(), CancellationToken.None);
+            }
+            catch (Exception exception)
+            {
+                caught = exception;
+            }
+
+            Assert.That(caught, Is.TypeOf<InvalidOperationException>());
+            Assert.That(Environment.HasValidOperationHandle(reference), Is.True);
+            var second = await reference.LoadAsync(CancellationToken.None);
             Assert.That(second, Is.SameAs(first));
         });
 
@@ -247,6 +336,33 @@ namespace ObjectReference.Tests
             var result = await reference.LoadAsync(progress, CancellationToken.None);
             Assert.That(result, Is.SameAs(Environment.Cube));
             Assert.That(progress.Value, Is.EqualTo(1.0f).Within(0.001f));
+        });
+
+        [UnityTest]
+        public IEnumerator LoadAsync_WhenLoadingFails_ReleasesHandle(
+            [Values(false, true)] bool withProgress) => new ToCoroutineEnumerator(async () =>
+        {
+            using var reference = new AddressableObjectReference<GameObject>(
+                ObjectReferenceTestEnvironment.MissingAddress);
+            Exception? caught = null;
+            try
+            {
+                if (withProgress)
+                {
+                    await reference.LoadAsync(new ProgressRecorder(), CancellationToken.None);
+                }
+                else
+                {
+                    await reference.LoadAsync(CancellationToken.None);
+                }
+            }
+            catch (Exception exception)
+            {
+                caught = exception;
+            }
+
+            Assert.That(caught, Is.TypeOf<InvalidOperationException>());
+            Assert.That(Environment.HasValidOperationHandle(reference), Is.False);
         });
 
         [UnityTest]
@@ -265,5 +381,10 @@ namespace ObjectReference.Tests
         public float Value { get; private set; } = -1.0f;
 
         public void Report(float value) => Value = value;
+    }
+
+    internal sealed class ThrowingProgress : IProgress<float>
+    {
+        public void Report(float value) => throw new InvalidOperationException("Progress reporting failed.");
     }
 }

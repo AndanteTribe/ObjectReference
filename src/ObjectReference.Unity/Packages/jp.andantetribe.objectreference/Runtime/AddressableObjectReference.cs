@@ -2,6 +2,7 @@
 #nullable enable
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
@@ -53,37 +54,79 @@ namespace ObjectReference
             _address = address ?? throw new ArgumentNullException(nameof(address), "Address cannot be null.");
         }
 
-        public async ValueTask<T> LoadAsync(CancellationToken cancellationToken)
+        public ValueTask<T> LoadAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!_handle.IsValid())
+            if (_handle.IsValid() && _handle.Status == AsyncOperationStatus.Succeeded)
             {
-                _handle = Addressables.LoadAssetAsync<T>(_address);
+                return new ValueTask<T>(_handle.Result);
             }
 
-            return await _handle.ToUniTask(cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+            return LoadAsyncCore(this, cancellationToken);
+
+            static async ValueTask<T> LoadAsyncCore(AddressableObjectReference<T> reference, CancellationToken cancellationToken)
+            {
+                if (!reference._handle.IsValid())
+                {
+                    reference._handle = Addressables.LoadAssetAsync<T>(reference._address);
+                }
+
+                try
+                {
+                    return await reference._handle.ToUniTask(cancellationToken: cancellationToken);
+                }
+                catch
+                {
+                    reference.Release();
+                    throw;
+                }
+            }
         }
 
         /// <inheritdoc />
-        public async ValueTask<T> LoadAsync(IProgress<float> progress, CancellationToken cancellationToken)
+        public ValueTask<T> LoadAsync(IProgress<float> progress, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!_handle.IsValid())
+            if (_handle.IsValid() && _handle.Status == AsyncOperationStatus.Succeeded)
             {
-                _handle = Addressables.LoadAssetAsync<T>(_address);
+                progress.Report(1.0f);
+                return new ValueTask<T>(_handle.Result);
             }
 
-            var result = await _handle.ToUniTask(progress: progress, cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
-            progress.Report(1.0f);
-            return result;
+            return LoadAsyncCore(this, progress, cancellationToken);
+
+            static async ValueTask<T> LoadAsyncCore(AddressableObjectReference<T> reference, IProgress<float> progress, CancellationToken cancellationToken)
+            {
+                if (!reference._handle.IsValid())
+                {
+                    reference._handle = Addressables.LoadAssetAsync<T>(reference._address);
+                }
+
+                T result;
+                try
+                {
+                    result = await reference._handle.ToUniTask(progress: progress, cancellationToken: cancellationToken);
+                }
+                catch
+                {
+                    reference.Release();
+                    throw;
+                }
+
+                progress.Report(1.0f);
+                return result;
+            }
         }
 
         /// <inheritdoc />
-        public void Dispose()
+        public void Dispose() => Release();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Release()
         {
             if (_handle.IsValid())
             {
-                Addressables.Release(_handle);
+                _handle.Release();
                 _handle = default;
             }
         }
