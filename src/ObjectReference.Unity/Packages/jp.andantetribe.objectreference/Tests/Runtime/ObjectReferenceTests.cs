@@ -132,11 +132,11 @@ namespace ObjectReference.Tests
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_Addressable_CachedProgressThrows_ReleasesHandle() => new ToCoroutineEnumerator(async () =>
+        public IEnumerator LoadAsync_Addressable_CachedProgressThrows_PreservesHandle() => new ToCoroutineEnumerator(async () =>
         {
             using var reference = Environment.CreateSerializableAddressableReference<GameObject>(
                 ObjectReferenceTestEnvironment.CubeGuid);
-            await reference.LoadAsync(CancellationToken.None);
+            var first = await reference.LoadAsync(CancellationToken.None);
 
             Exception? caught = null;
             try
@@ -149,7 +149,9 @@ namespace ObjectReference.Tests
             }
 
             Assert.That(caught, Is.TypeOf<InvalidOperationException>());
-            Assert.That(Environment.HasValidOperationHandle(reference), Is.False);
+            Assert.That(Environment.HasValidOperationHandle(reference), Is.True);
+            var second = await reference.LoadAsync(CancellationToken.None);
+            Assert.That(second, Is.SameAs(first));
         });
 
         [UnityTest]
@@ -303,11 +305,11 @@ namespace ObjectReference.Tests
         });
 
         [UnityTest]
-        public IEnumerator LoadAsync_CachedProgressThrows_ReleasesHandle() => new ToCoroutineEnumerator(async () =>
+        public IEnumerator LoadAsync_CachedProgressThrows_PreservesHandle() => new ToCoroutineEnumerator(async () =>
         {
             using var reference = new AddressableObjectReference<GameObject>(
                 ObjectReferenceTestEnvironment.CubeAddress);
-            await reference.LoadAsync(CancellationToken.None);
+            var first = await reference.LoadAsync(CancellationToken.None);
 
             Exception? caught = null;
             try
@@ -320,7 +322,9 @@ namespace ObjectReference.Tests
             }
 
             Assert.That(caught, Is.TypeOf<InvalidOperationException>());
-            Assert.That(Environment.HasValidOperationHandle(reference), Is.False);
+            Assert.That(Environment.HasValidOperationHandle(reference), Is.True);
+            var second = await reference.LoadAsync(CancellationToken.None);
+            Assert.That(second, Is.SameAs(first));
         });
 
         [UnityTest]

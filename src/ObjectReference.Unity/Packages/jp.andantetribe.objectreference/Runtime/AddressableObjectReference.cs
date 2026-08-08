@@ -64,9 +64,7 @@ namespace ObjectReference
 
             return LoadAsyncCore(this, cancellationToken);
 
-            static async ValueTask<T> LoadAsyncCore(
-                AddressableObjectReference<T> reference,
-                CancellationToken cancellationToken)
+            static async ValueTask<T> LoadAsyncCore(AddressableObjectReference<T> reference, CancellationToken cancellationToken)
             {
                 if (!reference._handle.IsValid())
                 {
@@ -91,51 +89,37 @@ namespace ObjectReference
             cancellationToken.ThrowIfCancellationRequested();
             if (_handle.IsValid() && _handle.Status == AsyncOperationStatus.Succeeded)
             {
-                try
-                {
-                    progress.Report(1.0f);
-                    return new ValueTask<T>(_handle.Result);
-                }
-                catch
-                {
-                    Release();
-                    throw;
-                }
+                progress.Report(1.0f);
+                return new ValueTask<T>(_handle.Result);
             }
 
             return LoadAsyncCore(this, progress, cancellationToken);
 
-            static async ValueTask<T> LoadAsyncCore(
-                AddressableObjectReference<T> reference,
-                IProgress<float> progress,
-                CancellationToken cancellationToken)
+            static async ValueTask<T> LoadAsyncCore(AddressableObjectReference<T> reference, IProgress<float> progress, CancellationToken cancellationToken)
             {
                 if (!reference._handle.IsValid())
                 {
                     reference._handle = Addressables.LoadAssetAsync<T>(reference._address);
                 }
 
+                T result;
                 try
                 {
-                    var result = await reference._handle.ToUniTask(
-                        progress: progress,
-                        cancellationToken: cancellationToken);
-                    progress.Report(1.0f);
-                    return result;
+                    result = await reference._handle.ToUniTask(progress: progress, cancellationToken: cancellationToken);
                 }
                 catch
                 {
                     reference.Release();
                     throw;
                 }
+
+                progress.Report(1.0f);
+                return result;
             }
         }
 
         /// <inheritdoc />
-        public void Dispose()
-        {
-            Release();
-        }
+        public void Dispose() => Release();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Release()

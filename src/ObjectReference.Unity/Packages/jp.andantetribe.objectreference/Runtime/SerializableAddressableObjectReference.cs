@@ -29,14 +29,11 @@ namespace ObjectReference
 
             return LoadAsyncCore(this, cancellationToken);
 
-            static async ValueTask<T> LoadAsyncCore(
-                SerializableAddressableObjectReference<T> reference,
-                CancellationToken cancellationToken)
+            static async ValueTask<T> LoadAsyncCore(SerializableAddressableObjectReference<T> reference, CancellationToken cancellationToken)
             {
                 try
                 {
-                    reference._cached = await reference._value.LoadAssetAsync<T>()
-                        .ToUniTask(cancellationToken: cancellationToken);
+                    reference._cached = await reference._value.LoadAssetAsync<T>().ToUniTask(cancellationToken: cancellationToken);
                     return reference._cached;
                 }
                 catch
@@ -53,50 +50,36 @@ namespace ObjectReference
             cancellationToken.ThrowIfCancellationRequested();
             if (_cached != null)
             {
-                try
-                {
-                    progress.Report(1.0f);
-                    return new ValueTask<T>(_cached);
-                }
-                catch
-                {
-                    Release();
-                    throw;
-                }
+                progress.Report(1.0f);
+                return new ValueTask<T>(_cached);
             }
 
             return LoadAsyncCore(this, progress, cancellationToken);
 
-            static async ValueTask<T> LoadAsyncCore(
-                SerializableAddressableObjectReference<T> reference,
-                IProgress<float> progress,
-                CancellationToken cancellationToken)
+            static async ValueTask<T> LoadAsyncCore(SerializableAddressableObjectReference<T> reference, IProgress<float> progress, CancellationToken cancellationToken)
             {
                 try
                 {
-                    reference._cached = await reference._value.LoadAssetAsync<T>()
-                        .ToUniTask(progress: progress, cancellationToken: cancellationToken);
-                    progress.Report(1.0f);
-                    return reference._cached;
+                    reference._cached = await reference._value.LoadAssetAsync<T>().ToUniTask(progress: progress, cancellationToken: cancellationToken);
                 }
                 catch
                 {
                     reference.Release();
                     throw;
                 }
+
+                progress.Report(1.0f);
+                return reference._cached;
             }
         }
 
         /// <inheritdoc />
-        public void Dispose()
-        {
-            Release();
-        }
+        public void Dispose() => Release();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Release()
         {
-            if (_value != null && _value.OperationHandle.IsValid())
+            if (_value.OperationHandle.IsValid())
             {
                 _value.ReleaseAsset();
             }
