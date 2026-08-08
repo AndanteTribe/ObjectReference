@@ -2,6 +2,7 @@
 #nullable enable
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
@@ -18,36 +19,89 @@ namespace ObjectReference
         private T? _cached;
 
         /// <inheritdoc />
-        public async ValueTask<T> LoadAsync(CancellationToken cancellationToken)
+        public ValueTask<T> LoadAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (_cached == null)
+            if (_cached != null)
             {
-                _cached = await _value.LoadAssetAsync<T>().ToUniTask(cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+                return new ValueTask<T>(_cached);
             }
-            return _cached;
+
+            return LoadAsyncCore(this, cancellationToken);
+
+            static async ValueTask<T> LoadAsyncCore(
+                SerializableAddressableObjectReference<T> reference,
+                CancellationToken cancellationToken)
+            {
+                try
+                {
+                    reference._cached = await reference._value.LoadAssetAsync<T>()
+                        .ToUniTask(cancellationToken: cancellationToken);
+                    return reference._cached;
+                }
+                catch
+                {
+                    reference.Release();
+                    throw;
+                }
+            }
         }
 
         /// <inheritdoc />
-        public async ValueTask<T> LoadAsync(IProgress<float> progress, CancellationToken cancellationToken)
+        public ValueTask<T> LoadAsync(IProgress<float> progress, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (_cached == null)
+            if (_cached != null)
             {
-                _cached ??= await _value.LoadAssetAsync<T>().ToUniTask(progress: progress, cancellationToken: cancellationToken, autoReleaseWhenCanceled: true);
+                try
+                {
+                    progress.Report(1.0f);
+                    return new ValueTask<T>(_cached);
+                }
+                catch
+                {
+                    Release();
+                    throw;
+                }
             }
-            progress.Report(1.0f);
-            return _cached;
+
+            return LoadAsyncCore(this, progress, cancellationToken);
+
+            static async ValueTask<T> LoadAsyncCore(
+                SerializableAddressableObjectReference<T> reference,
+                IProgress<float> progress,
+                CancellationToken cancellationToken)
+            {
+                try
+                {
+                    reference._cached = await reference._value.LoadAssetAsync<T>()
+                        .ToUniTask(progress: progress, cancellationToken: cancellationToken);
+                    progress.Report(1.0f);
+                    return reference._cached;
+                }
+                catch
+                {
+                    reference.Release();
+                    throw;
+                }
+            }
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
-            if (_cached != null)
+            Release();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Release()
+        {
+            if (_value != null && _value.OperationHandle.IsValid())
             {
                 _value.ReleaseAsset();
-                _cached = null;
             }
+
+            _cached = null;
         }
     }
 }
