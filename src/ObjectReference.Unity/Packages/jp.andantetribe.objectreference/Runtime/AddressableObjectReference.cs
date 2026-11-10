@@ -1,4 +1,4 @@
-﻿#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
+#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
 #nullable enable
 
 using System;
@@ -49,11 +49,10 @@ namespace ObjectReference
         private readonly string _address;
         private AsyncOperationHandle<T> _handle;
 
-        public AddressableObjectReference(string address)
-        {
-            _address = address ?? throw new ArgumentNullException(nameof(address), "Address cannot be null.");
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public AddressableObjectReference(string address) => _address = address ?? throw new ArgumentNullException(nameof(address), "Address cannot be null.");
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> LoadAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -84,6 +83,7 @@ namespace ObjectReference
         }
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> LoadAsync(IProgress<float> progress, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -119,6 +119,7 @@ namespace ObjectReference
         }
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Release();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

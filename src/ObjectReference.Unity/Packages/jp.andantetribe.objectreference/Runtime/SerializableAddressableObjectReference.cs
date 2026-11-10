@@ -1,4 +1,4 @@
-﻿#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
+#if ENABLE_ADDRESSABLES && ENABLE_UNITASK
 #nullable enable
 
 using System;
@@ -19,6 +19,7 @@ namespace ObjectReference
         private T? _cached;
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> LoadAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -45,6 +46,7 @@ namespace ObjectReference
         }
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> LoadAsync(IProgress<float> progress, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -74,6 +76,7 @@ namespace ObjectReference
         }
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Release();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
